@@ -3,7 +3,8 @@ import { WebSocketServer } from "ws";
 import { validateToken } from "../auth/session.js";
 import loadEnv from "../util/loadEnv.js";
 import { handleGameMessage } from "../game/index.js";
-import { addPlayerToWorld, removePlayerFromWorld } from "../game/core/world.js";
+import { WorldManager } from "../game/core/GameWorld.js";
+import { PlayerService } from "../game/PlayerService.js";
 
 loadEnv();
 
@@ -32,7 +33,28 @@ export function createWSServer(httpServer) {
 
       ws.user = { ...user, map: defaultMapName };
       console.log(`User connected: ${user.username} (id: ${user.id})`);
-      await addPlayerToWorld(user, defaultMapName);
+
+      // Load player from database
+      let player = await PlayerService.loadPlayer(user.id);
+
+      if (!player) {
+        // Create new player if not found
+        player = await PlayerService.createPlayer(
+          user.id,
+          user.username,
+          defaultMapName
+        );
+      }
+
+      if (!player) {
+        ws.close(1011, "Failed to load player data");
+        return;
+      }
+
+      // Add player to world
+      const world = await WorldManager.getWorld(player.map);
+      player.setOnline(true);
+      world.addPlayer(player);
 
       ws.on("message", (raw) => {
         try {
@@ -43,9 +65,17 @@ export function createWSServer(httpServer) {
         }
       });
 
-      ws.on("close", () => {
+      ws.on("close", async () => {
         console.log(`User disconnected: ${user.username}`);
-        removePlayerFromWorld(user.id, ws.user?.map || defaultMapName);
+        // Remove player from world and save to database
+        const world = WorldManager.worlds.get(player.map);
+        if (world) {
+          const removedPlayer = world.removePlayer(user.id);
+          if (removedPlayer) {
+            // Save player data to database
+            await PlayerService.savePlayer(removedPlayer);
+          }
+        }
       });
     } catch (err) {
       console.error("WS connection error: ");

@@ -1,4 +1,4 @@
-import { getAllWorlds } from "./world.js";
+import { WorldManager } from "./GameWorld.js";
 
 /**
  * @param {WebSocketServer} wss
@@ -8,12 +8,17 @@ export function startGameLoop(wss, intervalMs = 50) {
   console.log(`Game loop started (${intervalMs}ms interval)`);
 
   setInterval(() => {
-    const worlds = getAllWorlds();
+    const worlds = WorldManager.getAllWorlds();
     for (const world of worlds) {
+      // Convert players to network-safe data
+      const playersData = Array.from(world.players.values()).map((player) =>
+        player.getNetworkData()
+      );
+
       const payload = {
         type: "world_state",
         map: world.name,
-        players: Array.from(world.players.values()),
+        players: playersData,
         time: Date.now(),
       };
 

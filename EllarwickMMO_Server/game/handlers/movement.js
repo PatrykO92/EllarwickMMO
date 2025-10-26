@@ -1,4 +1,5 @@
-import { movePlayerInWorld } from "../core/world.js";
+import { WorldManager } from "../core/GameWorld.js";
+import { PlayerService } from "../PlayerService.js";
 
 /**
  * Handle movement message
@@ -6,12 +7,28 @@ import { movePlayerInWorld } from "../core/world.js";
  * @param {WebSocket} ws
  * @param {object} msg
  */
-export function handleMove(wss, ws, msg) {
-  const player = movePlayerInWorld(ws, msg.direction);
+export async function handleMove(wss, ws, msg) {
+  if (!ws.user) {
+    ws.send(JSON.stringify({ type: "error", text: "Not authenticated" }));
+    return;
+  }
+
+  const world = WorldManager.worlds.get(ws.user.map);
+  if (!world) {
+    ws.send(JSON.stringify({ type: "error", text: "World not found" }));
+    return;
+  }
+
+  const player = world.movePlayer(ws.user.id, msg.direction);
   if (!player) {
     ws.send(JSON.stringify({ type: "error", text: "Movement failed" }));
     return;
   }
+
+  // Save position to database (async, don't wait)
+  PlayerService.savePlayerPosition(player).catch((err) => {
+    console.error("Failed to save player position:", err);
+  });
 
   const payload = {
     type: "position",
