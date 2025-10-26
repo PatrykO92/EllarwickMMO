@@ -1,0 +1,33 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System
+.DS_Store
+Thumbs.db
+
+# Env / konfiguracja
+.env
+.env.local
+.env.test
+.env.production
+
+# Baza danych / dumpy
+*.sqlite
+*.db
+*.sql.dump
+
+# Logi
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Tymczasowe / testowe
+tmp/
+coverage/
