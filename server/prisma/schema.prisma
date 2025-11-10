@@ -1,0 +1,91 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  username      String    @unique
+  email         String?   @unique
+  password_hash Bytes
+  password_salt Bytes
+  created_at    DateTime  @default(now())
+  sessions      Session[]
+  player        Player?
+}
+
+model Session {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  expires_at DateTime
+  created_at DateTime @default(now())
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id])
+}
+
+model Player {
+  id         Int             @id @default(autoincrement())
+  user_id    Int             @unique
+  name       String
+  level      Int             @default(1)
+  exp        Int             @default(0)
+  hp         Int             @default(100)
+  ap         Int             @default(0)
+  x          Int             @default(0)
+  y          Int             @default(0)
+  outfit_id  Int?
+  inventory  InventoryItem[]
+  created_at DateTime        @default(now())
+  user       User            @relation(fields: [user_id], references: [id])
+}
+
+model Item {
+  id                Int             @id @default(autoincrement())
+  name              String
+  type              String
+  damage            Int?
+  range             Int?
+  critChance        Float?
+  critDamage        Float?
+  masteryLevelFight Int?
+  masteryLevelFish  Int?
+  armorValue        Int?
+  tier              Int?
+  renderSrc         String?
+  created_at        DateTime        @default(now())
+  lootEntries       Loot[]          @relation("ItemLoot")
+  inventoryItems    InventoryItem[]
+}
+
+model InventoryItem {
+  id        Int    @id @default(autoincrement())
+  player_id Int
+  item_id   Int
+  quantity  Int    @default(1)
+  player    Player @relation(fields: [player_id], references: [id])
+  item      Item   @relation(fields: [item_id], references: [id])
+}
+
+model Monster {
+  id        Int     @id @default(autoincrement())
+  name      String
+  hp        Int
+  def       Int
+  attack    Int
+  renderSrc String?
+  loot      Loot[]  @relation("MonsterLoot")
+}
+
+model Loot {
+  id         Int     @id @default(autoincrement())
+  monster_id Int
+  item_id    Int
+  chance     Float
+  monster    Monster @relation("MonsterLoot", fields: [monster_id], references: [id])
+  item       Item    @relation("ItemLoot", fields: [item_id], references: [id])
+}

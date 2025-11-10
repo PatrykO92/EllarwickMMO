@@ -1,0 +1,43 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "map.json",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "fileStates": {
+        "map.json": {
+            "scale": 3,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 208,
+                "y": 145.33333333333334
+            }
+        },
+        "map.json#map_tileset": {
+            "scaleInDock": 2,
+            "scaleInEditor": 5.5
+        }
+    },
+    "last.imagePath": "C:/repo/Ellarwick/client/assets/maps",
+    "map.fixedSize": false,
+    "map.lastUsedFormat": "json",
+    "map.renderOrder": "3",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "openFiles": [
+        "map.json"
+    ],
+    "project": "Map.tiled-project",
+    "recentFiles": [
+        "map.json"
+    ],
+    "resizeMap.removeObjects": true,
+    "tileset.embedInMap": true,
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}

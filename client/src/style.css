@@ -1,0 +1,14 @@
+@font-face {
+  font-family: "quaver";
+  src: url("/assets/fonts/quaver.ttf") format("ttf");
+  font-weight: normal;
+  font-style: normal;
+}
+
+html,
+body {
+  font-family: "quaver", monospace;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: never;
+}
