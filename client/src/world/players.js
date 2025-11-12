@@ -1,5 +1,74 @@
 import { clientState, worldState } from "../state/store.js";
 
+const POSITION_EPSILON = 0.001;
+const DEFAULT_INTERPOLATION_MS = 120;
+const MIN_INTERPOLATION_MS = 45;
+const MAX_INTERPOLATION_MS = 250;
+
+function getTimestamp() {
+  if (typeof performance !== "undefined" && typeof performance.now === "function") {
+    return performance.now();
+  }
+
+  return Date.now();
+}
+
+function sanitizeCoordinate(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function positionsAlmostEqual(a, b) {
+  if (!a || !b) {
+    return false;
+  }
+
+  return Math.abs((a.x ?? 0) - (b.x ?? 0)) < POSITION_EPSILON && Math.abs((a.y ?? 0) - (b.y ?? 0)) < POSITION_EPSILON;
+}
+
+function computeInterpolationDuration(userId) {
+  const base = Number.isFinite(clientState.lastWorldDelta) ? clientState.lastWorldDelta : DEFAULT_INTERPOLATION_MS;
+  const adjusted = userId === clientState.localPlayerId ? base * 0.6 : base;
+  return clamp(adjusted, MIN_INTERPOLATION_MS, MAX_INTERPOLATION_MS);
+}
+
+function getRenderStatePosition(renderState, fallback) {
+  if (!renderState) {
+    return { ...fallback };
+  }
+
+  const start = renderState.from ?? fallback;
+  const end = renderState.to ?? fallback;
+  return {
+    x: sanitizeCoordinate(start.x ?? end.x ?? fallback.x ?? 0),
+    y: sanitizeCoordinate(start.y ?? end.y ?? fallback.y ?? 0),
+  };
+}
+
+function createRenderState(existing, targetPosition, userId, timestamp) {
+  const fromPosition = existing ? getRenderablePosition(existing, timestamp) : { ...targetPosition };
+
+  if (positionsAlmostEqual(fromPosition, targetPosition)) {
+    return {
+      from: { ...targetPosition },
+      to: { ...targetPosition },
+      startTime: timestamp,
+      duration: 0,
+    };
+  }
+
+  return {
+    from: fromPosition,
+    to: { ...targetPosition },
+    startTime: timestamp,
+    duration: computeInterpolationDuration(userId),
+  };
+}
+
 const DEFAULT_OUTFIT = Object.freeze({
   clientName: 1,
   name: "Adventurer",
@@ -43,7 +112,8 @@ export function syncWorldPlayers(players) {
       continue;
     }
 
-    next.set(snapshot.userId, normalizePlayerSnapshot(snapshot));
+    const existing = worldState.players.get(snapshot.userId) ?? null;
+    next.set(snapshot.userId, normalizePlayerSnapshot(snapshot, existing));
   }
 
   worldState.players = next;
@@ -72,7 +142,7 @@ export function applyPlayerSnapshot(snapshot) {
     return existing;
   }
 
-  const normalized = normalizePlayerSnapshot({ ...existing, ...snapshot });
+  const normalized = normalizePlayerSnapshot({ ...existing, ...snapshot }, existing);
   worldState.players.set(userId, normalized);
   return normalized;
 }
@@ -87,21 +157,52 @@ export function removePlayer(userId) {
 }
 
 /** Converts raw payloads into consistent player objects. */
-function normalizePlayerSnapshot(snapshot) {
+function normalizePlayerSnapshot(snapshot, existing = null) {
+  const timestamp = getTimestamp();
+  const position = {
+    x: sanitizeCoordinate(snapshot.position?.x),
+    y: sanitizeCoordinate(snapshot.position?.y),
+  };
+  const velocity = {
+    x: sanitizeCoordinate(snapshot.velocity?.x),
+    y: sanitizeCoordinate(snapshot.velocity?.y),
+  };
   return {
     userId: snapshot.userId,
     username: snapshot.username ?? "Player",
-    position: {
-      x: Number(snapshot.position?.x ?? 0),
-      y: Number(snapshot.position?.y ?? 0),
-    },
-    velocity: {
-      x: Number(snapshot.velocity?.x ?? 0),
-      y: Number(snapshot.velocity?.y ?? 0),
-    },
+    position,
+    velocity,
     updatedAt: snapshot.updatedAt ? new Date(snapshot.updatedAt).getTime() : Date.now(),
     sequence: typeof snapshot.sequence === "number" ? snapshot.sequence : 0,
     outfit: normalizeOutfit(snapshot.outfit),
+    renderState: createRenderState(existing, position, snapshot.userId, timestamp),
+  };
+}
+
+export function getRenderablePosition(player, referenceTime = getTimestamp()) {
+  if (!player) {
+    return { x: 0, y: 0 };
+  }
+
+  const target = {
+    x: sanitizeCoordinate(player.position?.x),
+    y: sanitizeCoordinate(player.position?.y),
+  };
+
+  const renderState = player.renderState;
+  if (!renderState || typeof renderState.startTime !== "number" || renderState.duration <= 0) {
+    return target;
+  }
+
+  const elapsed = referenceTime - renderState.startTime;
+  const progress = clamp(elapsed / (renderState.duration || 1), 0, 1);
+  const eased = progress * (2 - progress);
+  const from = getRenderStatePosition(renderState, target);
+  const to = renderState.to ?? target;
+
+  return {
+    x: from.x + (sanitizeCoordinate(to.x) - from.x) * eased,
+    y: from.y + (sanitizeCoordinate(to.y) - from.y) * eased,
   };
 }
 
