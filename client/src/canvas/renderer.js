@@ -482,12 +482,4 @@ function drawPlayer(ctx, player, renderPosition, viewportWidth, viewportHeight, 
   ctx.textBaseline = "middle";
   ctx.fillText(player.username ?? "Player", screenX, labelY + labelHeight / 2);
 
-  if (player.velocity && (Math.abs(player.velocity.x) > MOVEMENT_EPSILON || Math.abs(player.velocity.y) > MOVEMENT_EPSILON)) {
-    ctx.beginPath();
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.6)";
-    ctx.lineWidth = 2;
-    ctx.moveTo(screenX, screenY);
-    ctx.lineTo(screenX + player.velocity.x * 4, screenY + player.velocity.y * 4);
-    ctx.stroke();
-  }
 }

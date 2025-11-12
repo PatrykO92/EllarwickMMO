@@ -4,6 +4,7 @@ const POSITION_EPSILON = 0.001;
 const DEFAULT_INTERPOLATION_MS = 120;
 const MIN_INTERPOLATION_MS = 45;
 const MAX_INTERPOLATION_MS = 250;
+const MIN_LEVEL = 1;
 
 function getTimestamp() {
   if (typeof performance !== "undefined" && typeof performance.now === "function") {
@@ -130,6 +131,7 @@ export function applyPlayerSnapshot(snapshot) {
   const existing = worldState.players.get(userId) ?? {
     userId,
     username: snapshot.username ?? "Player",
+    level: MIN_LEVEL,
     position: { x: 0, y: 0 },
     velocity: { x: 0, y: 0 },
     updatedAt: 0,
@@ -144,6 +146,12 @@ export function applyPlayerSnapshot(snapshot) {
 
   const normalized = normalizePlayerSnapshot({ ...existing, ...snapshot }, existing);
   worldState.players.set(userId, normalized);
+  if (userId === clientState.localPlayerId && clientState.user) {
+    clientState.user = {
+      ...clientState.user,
+      level: normalized.level,
+    };
+  }
   return normalized;
 }
 
@@ -170,6 +178,7 @@ function normalizePlayerSnapshot(snapshot, existing = null) {
   return {
     userId: snapshot.userId,
     username: snapshot.username ?? "Player",
+    level: sanitizeLevel(snapshot.level ?? existing?.level ?? MIN_LEVEL),
     position,
     velocity,
     updatedAt: snapshot.updatedAt ? new Date(snapshot.updatedAt).getTime() : Date.now(),
@@ -223,4 +232,12 @@ export function getPlayersForRoster() {
   });
 
   return players;
+}
+
+function sanitizeLevel(value, fallback = MIN_LEVEL) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.max(MIN_LEVEL, Math.round(numeric));
 }

@@ -1,7 +1,13 @@
-import { MOVE_RESEND_INTERVAL, MOVE_SPEED } from "../constants.js";
+import {
+  LEVEL_ONE_SPEED,
+  LEVEL_SPEED_INCREMENT,
+  MOVE_RESEND_INTERVAL,
+  MOVE_SPEED_MULTIPLIER,
+} from "../constants.js";
 import { clientState } from "../state/store.js";
 import { computeMovementVector, movementKeyMap, vectorsEqual } from "./inputState.js";
 import { sendMoveIntent } from "../network/websocket.js";
+import { getLocalPlayer } from "../world/players.js";
 
 /** Handles keyboard-driven movement intents and throttled resend logic. */
 
@@ -63,10 +69,31 @@ function dispatchMoveIntent(vector) {
       x: Number(vector.x.toFixed(4)),
       y: Number(vector.y.toFixed(4)),
     },
-    speed: MOVE_SPEED,
+    speed: getCurrentMoveSpeed(),
     sequence,
   });
 
   clientState.lastSentVector = { ...vector };
   clientState.lastMoveSentAt = performance.now();
+}
+
+function normalizeLevel(level) {
+  const numeric = Number(level);
+  if (!Number.isFinite(numeric)) {
+    return 1;
+  }
+  return Math.max(1, Math.round(numeric));
+}
+
+function getLevelSpeed(level) {
+  const normalized = normalizeLevel(level);
+  const bonus = (normalized - 1) * LEVEL_SPEED_INCREMENT;
+  return LEVEL_ONE_SPEED + bonus;
+}
+
+function getCurrentMoveSpeed() {
+  const player = getLocalPlayer();
+  const level = player?.level ?? clientState.user?.level ?? 1;
+  const levelSpeed = getLevelSpeed(level);
+  return levelSpeed * MOVE_SPEED_MULTIPLIER;
 }

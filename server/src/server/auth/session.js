@@ -35,19 +35,20 @@ export async function verifySessionToken(token) {
   const session = await prisma.session.findUnique({
     where: { token },
     include: {
-      user: {
-        select: {
-          id: true,
-          username: true,
-          email: true,
-          player: {
+          user: {
             select: {
               id: true,
-              outfit: {
+              username: true,
+              email: true,
+              player: {
                 select: {
                   id: true,
-                  name: true,
-                  client_name: true,
+                  level: true,
+                  outfit: {
+                    select: {
+                      id: true,
+                      name: true,
+                      client_name: true,
                 },
               },
             },

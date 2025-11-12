@@ -31,7 +31,6 @@ model Session {
 model Player {
   id         Int             @id @default(autoincrement())
   user_id    Int             @unique
-  name       String
   level      Int             @default(1)
   exp        Int             @default(0)
   hp         Int             @default(100)

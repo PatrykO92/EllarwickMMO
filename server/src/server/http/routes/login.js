@@ -59,6 +59,14 @@ export async function handleLogin(req, res) {
         { email: identifier },
       ],
     },
+    include: {
+      player: {
+        select: {
+          id: true,
+          level: true,
+        },
+      },
+    },
   });
 
   if (!user) {
@@ -84,6 +92,7 @@ export async function handleLogin(req, res) {
       id: user.id,
       username: user.username,
       email: user.email,
+      level: user.player?.level ?? 1,
     },
   });
 }

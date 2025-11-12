@@ -7,8 +7,10 @@ import { createClientError } from "../../state/playerStateStore.js";
  * everyone else in the shard.
  */
 
-const DEFAULT_MOVE_SPEED = 1;
 const MAX_MOVE_SPEED = 12;
+const LEVEL_SPEED_INCREMENT = 0.01;
+const LEVEL_ONE_SPEED = 1;
+const MOVE_SPEED_MULTIPLIER = 4;
 
 const moveIntentSchema = z.object({
   vector: z
@@ -30,6 +32,25 @@ const moveIntentSchema = z.object({
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function normalizeLevel(level, fallback = 1) {
+  const numeric = Number(level);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.max(1, Math.round(numeric));
+}
+
+function getLevelSpeed(level) {
+  const normalizedLevel = normalizeLevel(level, 1);
+  const bonus = (normalizedLevel - 1) * LEVEL_SPEED_INCREMENT;
+  return LEVEL_ONE_SPEED + bonus;
+}
+
+function getMovementSpeed(level) {
+  const levelSpeed = getLevelSpeed(level);
+  return levelSpeed * MOVE_SPEED_MULTIPLIER;
 }
 
 function normalizeVector(vector) {
@@ -102,12 +123,16 @@ export function registerMovementModule(dispatcher, context = {}) {
   dispatcher.registerHandler({
     type: "move",
     schema: moveIntentSchema,
-    description: "Updates the server-side player position based on intent vector",
+    description:
+      "Updates the server-side player position based on intent vector",
     handler: ({ connection, payload, requestId, send, broadcast, emitter }) => {
       const auth = connection.auth;
 
       if (!auth?.userId || !auth?.user) {
-        throw createClientError("unauthorized", "You must be authenticated to move");
+        throw createClientError(
+          "unauthorized",
+          "You must be authenticated to move"
+        );
       }
 
       const userId = auth.userId;
@@ -117,7 +142,9 @@ export function registerMovementModule(dispatcher, context = {}) {
       }
 
       const normalized = normalizeVector(payload.vector);
-      const desiredSpeed = payload.speed ?? DEFAULT_MOVE_SPEED;
+      const playerRecord = playerState.players.get(userId);
+      const playerLevel = playerRecord?.level ?? auth.user.player?.level ?? 1;
+      const desiredSpeed = getMovementSpeed(playerLevel);
       const speed = clamp(desiredSpeed, 0, MAX_MOVE_SPEED);
       const intentVector =
         normalized.length === 0 || speed === 0
@@ -137,7 +164,8 @@ export function registerMovementModule(dispatcher, context = {}) {
         }
 
         if (typeof payload.sequence === "number") {
-          const current = typeof record.sequence === "number" ? record.sequence : 0;
+          const current =
+            typeof record.sequence === "number" ? record.sequence : 0;
           record.sequence = Math.max(current + 1, payload.sequence);
         } else {
           record.sequence = (record.sequence ?? 0) + 1;

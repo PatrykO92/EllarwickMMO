@@ -60,12 +60,21 @@ function sanitizePlayerRecord(record) {
   return {
     userId: record.userId,
     username: record.username,
+    level: normalizeLevel(record.level),
     position: sanitizeVector(record.position ?? { x: 0, y: 0 }),
     velocity: sanitizeVector(record.velocity ?? { x: 0, y: 0 }),
     updatedAt: new Date(record.updatedAt ?? Date.now()).toISOString(),
     sequence: typeof record.sequence === "number" ? record.sequence : 0,
     outfit: normalizeOutfit(record.outfit),
   };
+}
+
+function normalizeLevel(level) {
+  const numeric = Number(level);
+  if (!Number.isFinite(numeric)) {
+    return 1;
+  }
+  return Math.max(1, Math.round(numeric));
 }
 
 export function createPlayerStateStore({ emitter } = {}) {
@@ -91,6 +100,7 @@ export function createPlayerStateStore({ emitter } = {}) {
       record = {
         userId,
         username: auth.user.username,
+        level: normalizeLevel(auth.user.player?.level ?? 1),
         position: { x: options.initialPosition?.x ?? 0, y: options.initialPosition?.y ?? 0 },
         velocity: { x: options.initialVelocity?.x ?? 0, y: options.initialVelocity?.y ?? 0 },
         movementIntent: { x: 0, y: 0 },
@@ -107,6 +117,7 @@ export function createPlayerStateStore({ emitter } = {}) {
       });
     } else {
       record.username = auth.user.username;
+      record.level = normalizeLevel(auth.user.player?.level ?? record.level);
       record.connectionId = connection.id;
       record.updatedAt = now;
       record.outfit = normalizeOutfit(auth.user.player?.outfit ?? record.outfit);

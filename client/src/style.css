@@ -59,6 +59,9 @@ body {
     var(--bg-color) 55%
   );
   color: var(--text-primary);
+  cursor:
+    url("/assets/cursor.png") 0 0,
+    auto;
 }
 
 #app {
