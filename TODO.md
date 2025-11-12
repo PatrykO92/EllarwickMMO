@@ -21,14 +21,14 @@ Focus: responsive real-time combat, and server-authoritative gameplay.
 
 ## 📦 **CORE / BACKEND**
 
-- [ ] PostgreSQL integration
-- [ ] User login
-- [ ] WebSocket authorization via token
-- [ ] Chat system (broadcast)
-- [ ] Modular WS dispatcher
-- [ ] Player movement handling (`type: "move"`)
-- [ ] Unified player state system
-- [ ] Server loop (tick loop / heartbeat)
+- [x] PostgreSQL integration
+- [x] User login
+- [x] WebSocket authorization via token
+- [x] Chat system (broadcast)
+- [x] Modular WS dispatcher
+- [x] Player movement handling (`type: "move"`)
+- [x] Unified player state system
+- [x] Server loop (tick loop / heartbeat)
 - [ ] Synchronization of nearby player positions
 - [ ] Spell handling (`type: "use_spell"`)
 - [ ] Combat handling (`type: "attack"`)

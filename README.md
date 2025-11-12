@@ -4,6 +4,12 @@ A lightweight, modular **2D top-down MMO** built from scratch using **Node.js**,
 
 ---
 
+## 📚 Documentation
+
+- [Architecture Guide](docs/ARCHITECTURE.md) — explains the end-to-end data flow and each major module in the server and client.
+
+---
+
 ## 🧠 Backend Stack
 
 | Purpose               | Technology                                    |
