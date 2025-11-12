@@ -38,7 +38,6 @@ export function renderAppShell(root) {
         <div class="game-content">
           <div class="canvas-wrapper">
             <canvas id="game-canvas" width="720" height="480" aria-label="World view"></canvas>
-            <p class="movement-hint">Move with WASD or Arrow keys</p>
           </div>
           <aside class="sidebar">
             <div class="player-roster">
