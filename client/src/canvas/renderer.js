@@ -2,6 +2,7 @@ import { WORLD_SCALE } from "../constants.js";
 import { clientState } from "../state/store.js";
 import { getLocalPlayer, getPlayers } from "../world/players.js";
 import { updateTickInfo } from "../ui/status.js";
+import { drawWorldMap, loadWorldMap } from "../world/map.js";
 
 let canvas = null;
 let ctx = null;
@@ -31,6 +32,10 @@ export function setupCanvas() {
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   ctx.imageSmoothingEnabled = true;
+
+  loadWorldMap().catch((error) => {
+    console.error("[client] Unable to preload world map", error);
+  });
 }
 
 /** Draws the current world snapshot. */
@@ -55,6 +60,8 @@ export function renderGame() {
   const local = getLocalPlayer();
   const offsetX = local ? local.position.x : 0;
   const offsetY = local ? local.position.y : 0;
+
+  drawWorldMap(ctx, width, height, offsetX, offsetY);
 
   for (const player of getPlayers().values()) {
     const screenX = width / 2 + (player.position.x - offsetX) * WORLD_SCALE;
