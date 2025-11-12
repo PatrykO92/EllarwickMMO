@@ -1,6 +1,6 @@
 import { WORLD_SCALE } from "../constants.js";
 import { clientState } from "../state/store.js";
-import { getLocalPlayer, getPlayers } from "../world/players.js";
+import { getLocalPlayer, getPlayers, getRenderablePosition } from "../world/players.js";
 import { updateTickInfo } from "../ui/status.js";
 import { drawWorldMap, loadWorldMap } from "../world/map.js";
 
@@ -89,21 +89,23 @@ export function renderGame() {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
 
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
   const local = getLocalPlayer();
-  const offsetX = local ? local.position.x : 0;
-  const offsetY = local ? local.position.y : 0;
+  const localPosition = local ? getRenderablePosition(local, now) : { x: 0, y: 0 };
+  const offsetX = localPosition.x;
+  const offsetY = localPosition.y;
 
   drawWorldMap(ctx, width, height, offsetX, offsetY);
 
   const players = getPlayers();
-  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
   const deltaMs = Math.min(now - lastAnimationTimestamp, 250);
   lastAnimationTimestamp = now;
 
   updatePlayerAnimations(players, deltaMs);
 
   for (const player of players.values()) {
-    drawPlayer(ctx, player, width, height, offsetX, offsetY);
+    const renderPosition = getRenderablePosition(player, now);
+    drawPlayer(ctx, player, renderPosition, width, height, offsetX, offsetY);
   }
 }
 
@@ -348,9 +350,9 @@ function advanceAnimation(state, frames, deltaMs, frameDuration, mode) {
   state.currentFrame = sequence[state.frameIndex];
 }
 
-function drawPlayer(ctx, player, viewportWidth, viewportHeight, offsetX, offsetY) {
-  const screenX = viewportWidth / 2 + (player.position.x - offsetX) * WORLD_SCALE;
-  const screenY = viewportHeight / 2 + (player.position.y - offsetY) * WORLD_SCALE;
+function drawPlayer(ctx, player, renderPosition, viewportWidth, viewportHeight, offsetX, offsetY) {
+  const screenX = viewportWidth / 2 + (renderPosition.x - offsetX) * WORLD_SCALE;
+  const screenY = viewportHeight / 2 + (renderPosition.y - offsetY) * WORLD_SCALE;
 
   const state = ensureAnimationState(player.userId);
   const outfitClientName = player?.outfit?.clientName ?? DEFAULT_OUTFIT_CLIENT_NAME;
