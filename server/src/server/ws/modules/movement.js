@@ -47,10 +47,14 @@ function normalizeVector(vector) {
 }
 
 export function registerMovementModule(dispatcher, context = {}) {
-  const { playerState } = context;
+  const { playerState, worldMap } = context;
 
   if (!playerState) {
     throw new Error("registerMovementModule requires a playerState store");
+  }
+
+  if (!worldMap || typeof worldMap.resolveMovementWithCollisions !== "function") {
+    throw new Error("registerMovementModule requires worldMap collision helpers");
   }
 
   function sendInitialState(connectionId) {
@@ -130,10 +134,16 @@ export function registerMovementModule(dispatcher, context = {}) {
           record.velocity.x = 0;
           record.velocity.y = 0;
         } else {
-          record.position.x += deltaX;
-          record.position.y += deltaY;
-          record.velocity.x = deltaX;
-          record.velocity.y = deltaY;
+          const { position, velocity } = worldMap.resolveMovementWithCollisions(
+            record.position,
+            deltaX,
+            deltaY
+          );
+
+          record.position.x = position.x;
+          record.position.y = position.y;
+          record.velocity.x = velocity.x;
+          record.velocity.y = velocity.y;
         }
 
         if (typeof payload.sequence === "number") {
