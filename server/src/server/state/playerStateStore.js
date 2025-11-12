@@ -93,6 +93,7 @@ export function createPlayerStateStore({ emitter } = {}) {
         username: auth.user.username,
         position: { x: options.initialPosition?.x ?? 0, y: options.initialPosition?.y ?? 0 },
         velocity: { x: options.initialVelocity?.x ?? 0, y: options.initialVelocity?.y ?? 0 },
+        movementIntent: { x: 0, y: 0 },
         updatedAt: now,
         sequence: 0,
         connectionId: connection.id,
@@ -109,6 +110,9 @@ export function createPlayerStateStore({ emitter } = {}) {
       record.connectionId = connection.id;
       record.updatedAt = now;
       record.outfit = normalizeOutfit(auth.user.player?.outfit ?? record.outfit);
+      if (!record.movementIntent) {
+        record.movementIntent = { x: 0, y: 0 };
+      }
       connections.set(connection.id, userId);
       emitter.emit("playerState:attached", {
         player: sanitizePlayerRecord(record),

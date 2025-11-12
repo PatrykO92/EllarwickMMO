@@ -12,6 +12,7 @@ import { handleHttpRequest } from "./server/http/router.js";
 import { authenticateWebSocket, WebSocketAuthError } from "./server/ws/authenticate.js";
 import { createWebSocketDispatcher } from "./server/ws/dispatcher.js";
 import { registerWebSocketModules } from "./server/ws/modules/index.js";
+import { registerMovementIntegrator } from "./server/systems/movementIntegrator.js";
 import { registerTickLoop } from "./server/tick/index.js";
 
 await connectToDatabase();
@@ -26,7 +27,11 @@ const server = http.createServer(async (req, res) => {
 const wss = new WebSocketServer({ server });
 const dispatcher = createWebSocketDispatcher();
 
-const { playerState } = registerWebSocketModules(dispatcher);
+const { playerState, worldMap } = registerWebSocketModules(dispatcher);
+const { dispose: disposeMovementIntegrator } = registerMovementIntegrator(dispatcher, {
+  playerState,
+  worldMap,
+});
 const { tickLoop, dispose: disposeTickLoop } = registerTickLoop(dispatcher, { playerState });
 
 wss.on("connection", async (ws, request) => {
@@ -96,5 +101,6 @@ server.listen(port, host, () => {
 });
 
 server.on("close", () => {
+  disposeMovementIntegrator();
   disposeTickLoop();
 });

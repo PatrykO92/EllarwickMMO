@@ -47,14 +47,10 @@ function normalizeVector(vector) {
 }
 
 export function registerMovementModule(dispatcher, context = {}) {
-  const { playerState, worldMap } = context;
+  const { playerState } = context;
 
   if (!playerState) {
     throw new Error("registerMovementModule requires a playerState store");
-  }
-
-  if (!worldMap || typeof worldMap.resolveMovementWithCollisions !== "function") {
-    throw new Error("registerMovementModule requires worldMap collision helpers");
   }
 
   function sendInitialState(connectionId) {
@@ -123,27 +119,21 @@ export function registerMovementModule(dispatcher, context = {}) {
       const normalized = normalizeVector(payload.vector);
       const desiredSpeed = payload.speed ?? DEFAULT_MOVE_SPEED;
       const speed = clamp(desiredSpeed, 0, MAX_MOVE_SPEED);
-      const deltaX = normalized.x * speed;
-      const deltaY = normalized.y * speed;
+      const intentVector =
+        normalized.length === 0 || speed === 0
+          ? { x: 0, y: 0 }
+          : {
+              x: normalized.x * speed,
+              y: normalized.y * speed,
+            };
 
       const snapshot = playerState.updatePlayer(userId, (record) => {
-        record.position = record.position ?? { x: 0, y: 0 };
+        record.movementIntent = intentVector;
         record.velocity = record.velocity ?? { x: 0, y: 0 };
 
-        if (normalized.length === 0) {
+        if (intentVector.x === 0 && intentVector.y === 0) {
           record.velocity.x = 0;
           record.velocity.y = 0;
-        } else {
-          const { position, velocity } = worldMap.resolveMovementWithCollisions(
-            record.position,
-            deltaX,
-            deltaY
-          );
-
-          record.position.x = position.x;
-          record.position.y = position.y;
-          record.velocity.x = velocity.x;
-          record.velocity.y = velocity.y;
         }
 
         if (typeof payload.sequence === "number") {
