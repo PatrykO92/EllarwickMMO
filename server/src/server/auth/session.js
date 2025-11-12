@@ -40,6 +40,18 @@ export async function verifySessionToken(token) {
           id: true,
           username: true,
           email: true,
+          player: {
+            select: {
+              id: true,
+              outfit: {
+                select: {
+                  id: true,
+                  name: true,
+                  client_name: true,
+                },
+              },
+            },
+          },
         },
       },
     },
