@@ -39,9 +39,31 @@ model Player {
   x          Int             @default(0)
   y          Int             @default(0)
   outfit_id  Int?
+  outfit     Outfit?         @relation("EquippedOutfit", fields: [outfit_id], references: [id])
+  outfits    PlayerOutfit[]
   inventory  InventoryItem[]
   created_at DateTime        @default(now())
   user       User            @relation(fields: [user_id], references: [id])
+}
+
+model Outfit {
+  id          Int             @id @default(autoincrement())
+  client_name Int             @unique
+  name        String
+  players     Player[]        @relation("EquippedOutfit")
+  unlocks     PlayerOutfit[]
+}
+
+model PlayerOutfit {
+  id         Int     @id @default(autoincrement())
+  player_id  Int
+  outfit_id  Int
+  unlocked   Boolean @default(false)
+  created_at DateTime @default(now())
+  player     Player  @relation(fields: [player_id], references: [id])
+  outfit     Outfit  @relation(fields: [outfit_id], references: [id])
+
+  @@unique([player_id, outfit_id])
 }
 
 model Item {

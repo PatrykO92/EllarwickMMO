@@ -25,6 +25,24 @@ function clampToPrecision(value, precision = 3) {
   return Number(value.toFixed(precision));
 }
 
+const DEFAULT_OUTFIT = Object.freeze({
+  clientName: 1,
+  name: "Adventurer",
+});
+
+function normalizeOutfit(outfit) {
+  if (!outfit || typeof outfit !== "object") {
+    return { ...DEFAULT_OUTFIT };
+  }
+
+  const clientNameValue = Number(outfit.clientName ?? outfit.client_name);
+  const clientName = Number.isFinite(clientNameValue) ? clientNameValue : DEFAULT_OUTFIT.clientName;
+  const nameValue = typeof outfit.name === "string" ? outfit.name.trim() : "";
+  const name = nameValue.length > 0 ? nameValue : DEFAULT_OUTFIT.name;
+
+  return { clientName, name };
+}
+
 function sanitizeVector(vector) {
   const result = vectorSchema.safeParse(vector);
 
@@ -46,6 +64,7 @@ function sanitizePlayerRecord(record) {
     velocity: sanitizeVector(record.velocity ?? { x: 0, y: 0 }),
     updatedAt: new Date(record.updatedAt ?? Date.now()).toISOString(),
     sequence: typeof record.sequence === "number" ? record.sequence : 0,
+    outfit: normalizeOutfit(record.outfit),
   };
 }
 
@@ -77,6 +96,7 @@ export function createPlayerStateStore({ emitter } = {}) {
         updatedAt: now,
         sequence: 0,
         connectionId: connection.id,
+        outfit: normalizeOutfit(auth.user.player?.outfit),
       };
       players.set(userId, record);
       connections.set(connection.id, userId);
@@ -88,6 +108,7 @@ export function createPlayerStateStore({ emitter } = {}) {
       record.username = auth.user.username;
       record.connectionId = connection.id;
       record.updatedAt = now;
+      record.outfit = normalizeOutfit(auth.user.player?.outfit ?? record.outfit);
       connections.set(connection.id, userId);
       emitter.emit("playerState:attached", {
         player: sanitizePlayerRecord(record),
@@ -114,6 +135,7 @@ export function createPlayerStateStore({ emitter } = {}) {
       }
     }
 
+    record.outfit = normalizeOutfit(record.outfit);
     record.updatedAt = Date.now();
     const snapshot = sanitizePlayerRecord(record);
 

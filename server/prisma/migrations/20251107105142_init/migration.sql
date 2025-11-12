@@ -39,6 +39,26 @@ CREATE TABLE "Player" (
 );
 
 -- CreateTable
+CREATE TABLE "Outfit" (
+    "id" SERIAL NOT NULL,
+    "client_name" INTEGER NOT NULL,
+    "name" TEXT NOT NULL,
+
+    CONSTRAINT "Outfit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PlayerOutfit" (
+    "id" SERIAL NOT NULL,
+    "player_id" INTEGER NOT NULL,
+    "outfit_id" INTEGER NOT NULL,
+    "unlocked" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PlayerOutfit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Item" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
@@ -101,11 +121,26 @@ CREATE UNIQUE INDEX "Session_token_key" ON "Session"("token");
 -- CreateIndex
 CREATE UNIQUE INDEX "Player_user_id_key" ON "Player"("user_id");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "Outfit_client_name_key" ON "Outfit"("client_name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PlayerOutfit_player_id_outfit_id_key" ON "PlayerOutfit"("player_id", "outfit_id");
+
 -- AddForeignKey
 ALTER TABLE "Session" ADD CONSTRAINT "Session_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Player" ADD CONSTRAINT "Player_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Player" ADD CONSTRAINT "Player_outfit_id_fkey" FOREIGN KEY ("outfit_id") REFERENCES "Outfit"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PlayerOutfit" ADD CONSTRAINT "PlayerOutfit_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "Player"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PlayerOutfit" ADD CONSTRAINT "PlayerOutfit_outfit_id_fkey" FOREIGN KEY ("outfit_id") REFERENCES "Outfit"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "InventoryItem" ADD CONSTRAINT "InventoryItem_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "Player"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

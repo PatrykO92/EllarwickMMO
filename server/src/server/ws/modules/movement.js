@@ -7,7 +7,7 @@ import { createClientError } from "../../state/playerStateStore.js";
  * everyone else in the shard.
  */
 
-const DEFAULT_MOVE_SPEED = 4;
+const DEFAULT_MOVE_SPEED = 1;
 const MAX_MOVE_SPEED = 12;
 
 const moveIntentSchema = z.object({
