@@ -59,8 +59,8 @@ export function drawWorldMap(ctx, viewportWidth, viewportHeight, offsetX, offset
   const mapPixelWidth = mapData.width * scale;
   const mapPixelHeight = mapData.height * scale;
 
-  const screenX = viewportWidth / 2 - offsetX * scale - mapPixelWidth / 2;
-  const screenY = viewportHeight / 2 - offsetY * scale - mapPixelHeight / 2;
+  const screenX = Math.round(viewportWidth / 2 - offsetX * scale - mapPixelWidth / 2);
+  const screenY = Math.round(viewportHeight / 2 - offsetY * scale - mapPixelHeight / 2);
 
   ctx.save();
   ctx.imageSmoothingEnabled = false;

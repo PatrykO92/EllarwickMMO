@@ -7,6 +7,7 @@ import { drawWorldMap, loadWorldMap } from "../world/map.js";
 const PLAYER_MOVE_FRAME_DURATION = 100; // ms per frame when moving
 const PLAYER_IDLE_FRAME_DURATION = 220; // ms per frame when idle
 const MOVEMENT_EPSILON = 0.01;
+const CAMERA_SNAP_DURATION = 90; // ms to fully catch up to the target
 const OUTFITS_INDEX_PATH = "/assets/outfits/index.js";
 const DEFAULT_OUTFIT_CLIENT_NAME = 1;
 const DEFAULT_OUTFIT_CONFIG = Object.freeze({
@@ -25,6 +26,14 @@ let outfitsPromise = null;
 const outfitSprites = new Map();
 const playerAnimations = new Map();
 let lastAnimationTimestamp = typeof performance !== "undefined" ? performance.now() : Date.now();
+
+const cameraState = {
+  initialized: false,
+  lastTimestamp: typeof performance !== "undefined" ? performance.now() : Date.now(),
+  playerId: null,
+  x: 0,
+  y: 0,
+};
 
 let canvas = null;
 let ctx = null;
@@ -91,9 +100,9 @@ export function renderGame() {
 
   const now = typeof performance !== "undefined" ? performance.now() : Date.now();
   const local = getLocalPlayer();
-  const localPosition = local ? getRenderablePosition(local, now) : { x: 0, y: 0 };
-  const offsetX = localPosition.x;
-  const offsetY = localPosition.y;
+  const cameraOffset = updateCameraOffset(local, now);
+  const offsetX = cameraOffset.x;
+  const offsetY = cameraOffset.y;
 
   drawWorldMap(ctx, width, height, offsetX, offsetY);
 
@@ -117,6 +126,52 @@ export function destroyCanvas() {
   outfitSprites.clear();
   outfitsPromise = null;
   outfitsRegistry = { [DEFAULT_OUTFIT_CLIENT_NAME]: DEFAULT_OUTFIT_CONFIG };
+  resetCameraState();
+}
+
+function resetCameraState() {
+  cameraState.initialized = false;
+  cameraState.playerId = null;
+  cameraState.lastTimestamp = typeof performance !== "undefined" ? performance.now() : Date.now();
+  cameraState.x = 0;
+  cameraState.y = 0;
+}
+
+function updateCameraOffset(localPlayer, timestamp) {
+  if (!localPlayer) {
+    resetCameraState();
+    return { x: 0, y: 0 };
+  }
+
+  const target = getRenderablePosition(localPlayer, timestamp);
+  const playerId = localPlayer.userId ?? null;
+
+  if (!cameraState.initialized || cameraState.playerId !== playerId) {
+    cameraState.initialized = true;
+    cameraState.playerId = playerId;
+    cameraState.x = target.x;
+    cameraState.y = target.y;
+    cameraState.lastTimestamp = timestamp;
+    return { x: cameraState.x, y: cameraState.y };
+  }
+
+  const delta = Math.max(0, Math.min(timestamp - cameraState.lastTimestamp, 250));
+  cameraState.lastTimestamp = timestamp;
+
+  if (CAMERA_SNAP_DURATION <= 0) {
+    cameraState.x = target.x;
+    cameraState.y = target.y;
+    return { x: cameraState.x, y: cameraState.y };
+  }
+
+  const factor = Math.min(1, delta / CAMERA_SNAP_DURATION);
+  const nextX = cameraState.x + (target.x - cameraState.x) * factor;
+  const nextY = cameraState.y + (target.y - cameraState.y) * factor;
+
+  cameraState.x = Number.isFinite(nextX) ? nextX : target.x;
+  cameraState.y = Number.isFinite(nextY) ? nextY : target.y;
+
+  return { x: cameraState.x, y: cameraState.y };
 }
 
 function loadOutfitRegistry() {
