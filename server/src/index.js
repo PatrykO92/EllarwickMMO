@@ -1,26 +1,73 @@
 import http from "http";
 import { WebSocketServer } from "ws";
+
+/**
+ * Entry point that wires HTTP routing, WebSocket dispatching, and the tick loop
+ * together into a single Node.js process. The server is intentionally lean so
+ * gameplay modules live in their own files.
+ */
 import { SERVER_HOST, SERVER_PORT } from "../config/config.js";
+import { connectToDatabase } from "./db/prismaClient.js";
+import { handleHttpRequest } from "./server/http/router.js";
+import { authenticateWebSocket, WebSocketAuthError } from "./server/ws/authenticate.js";
+import { createWebSocketDispatcher } from "./server/ws/dispatcher.js";
+import { registerWebSocketModules } from "./server/ws/modules/index.js";
+import { registerTickLoop } from "./server/tick/index.js";
 
-const host = SERVER_HOST ?? "0.0.0.0";
-const port = SERVER_PORT ?? 9090;
+await connectToDatabase();
 
-const server = http.createServer((req, res) => {
-  res.statusCode = 404;
-  res.setHeader("Content-Type", "text/plain; charset=utf-8");
-  res.end("Not Found");
+const host = SERVER_HOST;
+const port = SERVER_PORT;
+
+const server = http.createServer(async (req, res) => {
+  await handleHttpRequest(req, res);
 });
 
 const wss = new WebSocketServer({ server });
+const dispatcher = createWebSocketDispatcher();
 
-wss.on("connection", (ws, request) => {
+const { playerState } = registerWebSocketModules(dispatcher);
+const { tickLoop, dispose: disposeTickLoop } = registerTickLoop(dispatcher, { playerState });
+
+wss.on("connection", async (ws, request) => {
   const { socket } = request;
-  const remoteAddres = socket.remoteAddress ?? "unknown";
-  const remotePort = socket.remotePort ?? "unknow";
+  const remoteAddress = socket.remoteAddress ?? "unknown";
+  const remotePort = socket.remotePort ?? "unknown";
   const connectedAt = new Date().toISOString();
 
+  let authContext;
+
+  try {
+    authContext = await authenticateWebSocket(request);
+    ws.auth = authContext;
+  } catch (error) {
+    const isAuthError = error instanceof WebSocketAuthError;
+    const closeCode = isAuthError ? error.closeCode : 1011;
+    const reason = isAuthError ? error.code : "internal_error";
+
+    console.warn(
+      `WebSocket authentication failed from ${remoteAddress}:${remotePort} at ${connectedAt}: ${reason}`
+    );
+
+    if (!isAuthError) {
+      console.error(error);
+    }
+
+    ws.close(closeCode, reason);
+    ws.terminate();
+    return;
+  }
+
+  const { connection: dispatcherConnection } = dispatcher.attachConnection(ws, {
+    auth: authContext,
+    remoteAddress,
+    remotePort,
+  });
+
+  ws.connectionId = dispatcherConnection.id;
+
   console.log(
-    `WebSocket connextion established from ${remoteAddres}:${remotePort} at ${connectedAt}`
+    `WebSocket dispatcher connection ${dispatcherConnection.id} established for user ${authContext.user.username} (#${authContext.userId}) from ${remoteAddress}:${remotePort} at ${connectedAt}`
   );
 
   ws.on("close", (code, reason) => {
@@ -32,18 +79,22 @@ wss.on("connection", (ws, request) => {
         : "";
 
     console.log(
-      `WebSocket connection closed from ${remoteAddres}:${remotePort} at ${new Date().toISOString()} with code ${code} and reason ${reasonText}`
+      `WebSocket connection ${dispatcherConnection.id} (user ${authContext.user.username} #${authContext.userId}) closed from ${remoteAddress}:${remotePort} at ${new Date().toISOString()} with code ${code} and reason ${reasonText}`
     );
   });
 
   ws.on("error", (error) => {
     console.error(
-      `WebScoket error from ${remoteAddres}:${remotePort} at${new Date().toISOString()}:`
+      `WebSocket error on connection ${dispatcherConnection.id} (user ${authContext.user.username} #${authContext.userId}) from ${remoteAddress}:${remotePort} at ${new Date().toISOString()}:`
     );
     console.error(error);
   });
 });
 
 server.listen(port, host, () => {
-  console.log(`Server listining on http://${host}:${port}`);
+  console.log(`Server listening on http://${host}:${port}`);
+});
+
+server.on("close", () => {
+  disposeTickLoop();
 });
