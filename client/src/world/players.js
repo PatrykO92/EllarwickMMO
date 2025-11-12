@@ -1,5 +1,23 @@
 import { clientState, worldState } from "../state/store.js";
 
+const DEFAULT_OUTFIT = Object.freeze({
+  clientName: 1,
+  name: "Adventurer",
+});
+
+function normalizeOutfit(outfit) {
+  if (!outfit || typeof outfit !== "object") {
+    return { ...DEFAULT_OUTFIT };
+  }
+
+  const clientNameValue = Number(outfit.clientName ?? outfit.client_name);
+  const clientName = Number.isFinite(clientNameValue) ? clientNameValue : DEFAULT_OUTFIT.clientName;
+  const nameValue = typeof outfit.name === "string" ? outfit.name.trim() : "";
+  const name = nameValue.length > 0 ? nameValue : DEFAULT_OUTFIT.name;
+
+  return { clientName, name };
+}
+
 /** Data-access helpers for the client-side mirror of server player state. */
 
 /** Returns an iterator over the tracked players. */
@@ -46,6 +64,7 @@ export function applyPlayerSnapshot(snapshot) {
     velocity: { x: 0, y: 0 },
     updatedAt: 0,
     sequence: -1,
+    outfit: normalizeOutfit(null),
   };
 
   const incomingSequence = typeof snapshot.sequence === "number" ? snapshot.sequence : existing.sequence;
@@ -82,6 +101,7 @@ function normalizePlayerSnapshot(snapshot) {
     },
     updatedAt: snapshot.updatedAt ? new Date(snapshot.updatedAt).getTime() : Date.now(),
     sequence: typeof snapshot.sequence === "number" ? snapshot.sequence : 0,
+    outfit: normalizeOutfit(snapshot.outfit),
   };
 }
 
