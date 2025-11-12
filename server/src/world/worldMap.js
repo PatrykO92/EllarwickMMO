@@ -1,4 +1,4 @@
-import defaultMapDefinition from "../assets/maps/map.json" assert { type: "json" };
+import defaultMapDefinition from "../assets/maps/map.json" with { type: 'json' };
 
 const FLIPPED_GID_MASK = 0x1fffffff;
 
@@ -82,7 +82,9 @@ function normalizeMapDefinition(json) {
   const height = Number(json.height ?? 0);
   const tileWidth = Number(json.tilewidth ?? json.tileWidth ?? 0);
   const tileHeight = Number(json.tileheight ?? json.tileHeight ?? 0);
-  const layers = Array.isArray(json.layers) ? json.layers.filter((layer) => layer?.type === "tilelayer") : [];
+  const layers = Array.isArray(json.layers)
+    ? json.layers.filter((layer) => layer?.type === "tilelayer")
+    : [];
   const tileset = Array.isArray(json.tilesets) ? json.tilesets[0] : null;
 
   if (!width || !height || !tileWidth || !tileHeight || !tileset) {
@@ -110,14 +112,17 @@ function normalizeMapDefinition(json) {
 }
 
 function buildCollisionGrid(map) {
-  const grid = Array.from({ length: map.height }, () => Array.from({ length: map.width }, () => false));
+  const grid = Array.from({ length: map.height }, () =>
+    Array.from({ length: map.width }, () => false)
+  );
 
   const collidableLocalIds = new Set();
 
   for (const tile of map.tileset.tiles) {
     const hasCollisionObjects = Array.isArray(tile?.objectgroup?.objects)
-      ? tile.objectgroup.objects.some((object) =>
-          Number(object?.width ?? 0) > 0 && Number(object?.height ?? 0) > 0
+      ? tile.objectgroup.objects.some(
+          (object) =>
+            Number(object?.width ?? 0) > 0 && Number(object?.height ?? 0) > 0
         )
       : false;
 
