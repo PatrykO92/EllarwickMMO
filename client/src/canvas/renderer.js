@@ -122,7 +122,7 @@ function loadOutfitRegistry() {
     return outfitsPromise;
   }
 
-  outfitsPromise = import(/* @vite-ignore */ OUTFITS_INDEX_PATH)
+  outfitsPromise = loadOutfitModule()
     .then((module) => {
       if (module && typeof module.outfits === "object" && module.outfits !== null) {
         const registry = { ...module.outfits };
@@ -144,6 +144,35 @@ function loadOutfitRegistry() {
     });
 
   return outfitsPromise;
+}
+
+function loadOutfitModule() {
+  if (
+    typeof fetch !== "function" ||
+    typeof Blob === "undefined" ||
+    typeof URL === "undefined" ||
+    typeof URL.createObjectURL !== "function" ||
+    typeof URL.revokeObjectURL !== "function"
+  ) {
+    return Promise.reject(new Error("Outfit registry requires browser Fetch, Blob, and URL APIs"));
+  }
+
+  return fetch(OUTFITS_INDEX_PATH, { cache: "no-store" })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch outfit registry: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then((source) => {
+      const blob = new Blob([source], { type: "text/javascript" });
+      const moduleUrl = URL.createObjectURL(blob);
+
+      return import(/* @vite-ignore */ moduleUrl)
+        .finally(() => {
+          URL.revokeObjectURL(moduleUrl);
+        });
+    });
 }
 
 function toRegistryKey(value) {
